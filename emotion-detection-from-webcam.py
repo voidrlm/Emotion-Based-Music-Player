@@ -2,8 +2,11 @@ import cv2
 from deepface import DeepFace
 import time
 from collections import defaultdict
+import os
+import random
+from pygame import mixer
 
-interval = 5
+interval = 10
 
 def detect_emotion(image):
     try:
@@ -14,6 +17,23 @@ def detect_emotion(image):
     except Exception as e:
         print(f"Error analyzing emotion: {e}")
         return "Unknown", {}
+
+def play_music(emotion, music_folder="music_db"):
+    emotion_folder = os.path.join(music_folder, emotion.lower())
+    print(emotion_folder)
+    if os.path.exists(emotion_folder) and os.path.isdir(emotion_folder):
+        music_files = [f for f in os.listdir(emotion_folder) if f.endswith('.mp3')]
+        if music_files:
+            selected_music = random.choice(music_files)
+            music_path = os.path.join(emotion_folder, selected_music)
+            print(f"Playing: {selected_music} for emotion: {emotion.upper()}")
+            mixer.init()
+            mixer.music.load(music_path)
+            mixer.music.play()
+        else:
+            print(f"No music files found for emotion: {emotion.upper()}")
+    else:
+        print(f"No folder found for emotion: {emotion.upper()}")
 
 cap = cv2.VideoCapture(0)
 
@@ -26,6 +46,7 @@ face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_fronta
 emotion_accumulator = defaultdict(float)
 frame_count = 0
 start_time = time.time()
+current_emotion = None
 
 while True:
     ret, frame = cap.read()
@@ -58,11 +79,15 @@ while True:
 
         dominant_avg_emotion = max(avg_emotions.items(), key=lambda x: x[1])[0]
 
-        print("\nAverage emotions over last 5 seconds:")
+        print("\nScorezzzzzzz:")
         for emotion, avg_score in avg_emotions.items():
             print(f"{emotion.capitalize()}: {avg_score:.2f}")
 
-        print(f"\nDominant Average Emotion: {dominant_avg_emotion.upper()}")
+        print(f"\nAverage emotionnnnn: {dominant_avg_emotion.upper()}")
+
+        if dominant_avg_emotion != current_emotion:
+            current_emotion = dominant_avg_emotion
+            play_music(current_emotion)
 
         emotion_accumulator.clear()
         frame_count = 0
