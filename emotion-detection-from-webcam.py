@@ -18,22 +18,35 @@ def detect_emotion(image):
         print(f"Error analyzing emotion: {e}")
         return "Unknown", {}
 
-def play_music(emotion, music_folder="music_db"):
-    emotion_folder = os.path.join(music_folder, emotion.lower())
-    print(emotion_folder)
+def play_music_with_crossfade(new_emotion, current_channel, music_folder="music_db"):
+    emotion_folder = os.path.join(music_folder, new_emotion.lower())
     if os.path.exists(emotion_folder) and os.path.isdir(emotion_folder):
         music_files = [f for f in os.listdir(emotion_folder) if f.endswith('.mp3')]
         if music_files:
             selected_music = random.choice(music_files)
             music_path = os.path.join(emotion_folder, selected_music)
-            print(f"Playing: {selected_music} for emotion: {emotion.upper()}")
+            print(f"Crossfading to: {selected_music} for emotion: {new_emotion.upper()}")
+
+
             mixer.init()
-            mixer.music.load(music_path)
-            mixer.music.play()
+
+            new_channel = mixer.Channel(1)
+            new_channel.set_volume(0)
+            new_sound = mixer.Sound(music_path)
+            new_channel.play(new_sound)
+
+         
+            for i in range(100):
+                current_channel.set_volume(1 - i / 100) 
+                new_channel.set_volume(i / 100)          
+                time.sleep(0.05)
+
+            return new_channel  
         else:
-            print(f"No music files found for emotion: {emotion.upper()}")
+            print(f"No music files found for emotion: {new_emotion.upper()}")
     else:
-        print(f"No folder found for emotion: {emotion.upper()}")
+        print(f"No folder found for emotion: {new_emotion.upper()}")
+    return current_channel
 
 cap = cv2.VideoCapture(0)
 
@@ -47,6 +60,8 @@ emotion_accumulator = defaultdict(float)
 frame_count = 0
 start_time = time.time()
 current_emotion = None
+mixer.init()
+current_channel = mixer.Channel(0)
 
 while True:
     ret, frame = cap.read()
@@ -79,15 +94,15 @@ while True:
 
         dominant_avg_emotion = max(avg_emotions.items(), key=lambda x: x[1])[0]
 
-        print("\nScorezzzzzzz:")
+        print("\nAverage Emotion Scores:")
         for emotion, avg_score in avg_emotions.items():
             print(f"{emotion.capitalize()}: {avg_score:.2f}")
 
-        print(f"\nAverage emotionnnnn: {dominant_avg_emotion.upper()}")
+        print(f"\nDominant Emotion: {dominant_avg_emotion.upper()}")
 
         if dominant_avg_emotion != current_emotion:
             current_emotion = dominant_avg_emotion
-            play_music(current_emotion)
+            current_channel = play_music_with_crossfade(current_emotion, current_channel)
 
         emotion_accumulator.clear()
         frame_count = 0
