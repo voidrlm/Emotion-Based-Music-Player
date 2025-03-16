@@ -2,7 +2,13 @@
 
 This project detects facial emotions in real time using DeepFace and plays music that matches the detected mood.
 
+Preview :
+
 ![image](https://github.com/user-attachments/assets/670e0fef-7fee-48b2-916e-0cadd9c85bd7)
+
+Presentation : 
+
+[Emotion-Based-Music-Player.pptx](https://github.com/user-attachments/files/19274325/Emotion-Based-Music-Player.pptx)
 
 
 🚀 Features
