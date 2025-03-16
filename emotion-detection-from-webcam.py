@@ -7,18 +7,22 @@ import random
 from pygame import mixer
 
 interval = 10  
-crossfade_duration = 5  
+crossfade_duration = 3
+enable_attributes = False  
 
 def detect_attributes(image):
     try:
-        analysis = DeepFace.analyze(image, actions=['emotion', 'age', 'gender', 'race'], enforce_detection=False)
+        actions = ['emotion']
+        if enable_attributes:
+            actions.extend(['age', 'gender', 'race'])
+        analysis = DeepFace.analyze(image, actions=actions, enforce_detection=False)
         
         dominant_emotion = analysis[0].get('dominant_emotion', 'Unknown')
         emotion_scores = analysis[0].get('emotion', {})
-
-        age = analysis[0].get('age', 'Unknown')
-        gender = analysis[0].get('dominant_gender', 'Unknown')
-        race = analysis[0].get('dominant_race', 'Unknown')
+        
+        age = analysis[0].get('age', 'Unknown') if enable_attributes else 'Disabled'
+        gender = analysis[0].get('dominant_gender', 'Unknown') if enable_attributes else 'Disabled'
+        race = analysis[0].get('dominant_race', 'Unknown') if enable_attributes else 'Disabled'
 
         return dominant_emotion, emotion_scores, age, gender, race
     except Exception as e:
@@ -55,22 +59,18 @@ def play_music_with_crossfade(new_emotion, current_channel, music_folder="music_
     
     return current_channel
 
-
 cap = cv2.VideoCapture(0)
 
 if not cap.isOpened():
     print("Error: Could not open webcam.")
     exit()
 
-
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-
 
 emotion_accumulator = defaultdict(float)
 frame_count = 0
 start_time = time.time()
 current_emotion = None
-
 
 mixer.init()
 current_channel = mixer.Channel(0)
@@ -84,9 +84,7 @@ while True:
     rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-
     faces = face_cascade.detectMultiScale(gray_frame, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
-
 
     dominant_emotion, emotion_scores, age, gender, race = detect_attributes(rgb_frame)
 
@@ -94,17 +92,17 @@ while True:
         emotion_accumulator[emotion] += score
     frame_count += 1
 
- 
     for (x, y, w, h) in faces:
         cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
         cv2.putText(frame, f'Emotion: {dominant_emotion}', (x, y - 10),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-        cv2.putText(frame, f'Age: {age}', (x, y - 30),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
-        cv2.putText(frame, f'Gender: {gender}', (x, y - 50),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 0), 2)
-        cv2.putText(frame, f'Race: {race}', (x, y - 70),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 165, 255), 2)
+        if enable_attributes:
+            cv2.putText(frame, f'Age: {age}', (x, y - 30),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+            cv2.putText(frame, f'Gender: {gender}', (x, y - 50),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 0), 2)
+            cv2.putText(frame, f'Race: {race}', (x, y - 70),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 165, 255), 2)
 
     cv2.imshow('Emotion Detection', frame)
 
@@ -117,26 +115,25 @@ while True:
         else:
             dominant_avg_emotion = "neutral"
 
-        print("\nEmotion Scores:")
+        print("\nScores:")
         for emotion, avg_score in avg_emotions.items():
             print(f"{emotion.capitalize()}: {avg_score:.2f}")
 
-        print(f"\nCurrent Vibe: {dominant_avg_emotion.upper()}")
-        print(f"Age: {age}, Gender: {gender}, Race: {race}")
+        print(f"\nVibe: {dominant_avg_emotion.upper()}")
+        if enable_attributes:
+            print(f"Age: {age}, Gender: {gender}, Race: {race}")
 
- 
         if dominant_avg_emotion != current_emotion:
             current_emotion = dominant_avg_emotion
             current_channel = play_music_with_crossfade(current_emotion, current_channel)
 
-
         emotion_accumulator.clear()
         frame_count = 0
         start_time = current_time
-
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
 cap.release()
 cv2.destroyAllWindows()
+
