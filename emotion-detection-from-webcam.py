@@ -51,6 +51,7 @@ def play_music_with_crossfade(new_emotion, current_channel, music_folder="music_
                 new_channel.set_volume(i / steps)        
                 time.sleep(delay_per_step)
 
+            print(f"Now playing: {selected_music}")
             return new_channel 
         else:
             print(f"No music files found for emotion: {new_emotion.upper()}")
